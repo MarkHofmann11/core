@@ -137,7 +137,17 @@ async def info_for_device(hass, device_id):
             {
                 "topic": topic,
                 "messages": [
+<<<<<<< HEAD
                     {"payload": msg.payload, "time": msg.timestamp, "topic": msg.topic}
+=======
+                    {
+                        "payload": msg.payload,
+                        "qos": msg.qos,
+                        "retain": msg.retain,
+                        "time": msg.timestamp,
+                        "topic": msg.topic,
+                    }
+>>>>>>> dev
                     for msg in list(subscription["messages"])
                 ],
             }

@@ -2,7 +2,6 @@
 from uuid import uuid4
 
 from aiohttp import ClientResponseError
-from asynctest import Mock, patch
 from pysmartthings import APIResponseError
 from pysmartthings.installedapp import format_install_url
 
@@ -16,6 +15,10 @@ from homeassistant.components.smartthings.const import (
     CONF_OAUTH_CLIENT_SECRET,
     DOMAIN,
 )
+<<<<<<< HEAD
+=======
+from homeassistant.config import async_process_ha_core_config
+>>>>>>> dev
 from homeassistant.const import (
     CONF_ACCESS_TOKEN,
     HTTP_FORBIDDEN,
@@ -23,7 +26,8 @@ from homeassistant.const import (
     HTTP_UNAUTHORIZED,
 )
 
-from tests.common import MockConfigEntry, mock_coro
+from tests.async_mock import AsyncMock, Mock, patch
+from tests.common import MockConfigEntry
 
 
 async def test_import_shows_user_step(hass):
@@ -76,6 +80,7 @@ async def test_entry_created(hass, app, app_oauth_client, location, smartthings_
     )
     assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
     assert result["step_id"] == "select_location"
+<<<<<<< HEAD
 
     # Select location and advance to external auth
     result = await hass.config_entries.flow.async_configure(
@@ -105,6 +110,37 @@ async def test_entry_created(hass, app, app_oauth_client, location, smartthings_
     )
 
 
+=======
+
+    # Select location and advance to external auth
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_LOCATION_ID: location.location_id}
+    )
+    assert result["type"] == data_entry_flow.RESULT_TYPE_EXTERNAL_STEP
+    assert result["step_id"] == "authorize"
+    assert result["url"] == format_install_url(app.app_id, location.location_id)
+
+    # Complete external auth and advance to install
+    await smartapp.smartapp_install(hass, request, None, app)
+
+    # Finish
+    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    assert result["type"] == data_entry_flow.RESULT_TYPE_CREATE_ENTRY
+    assert result["data"]["app_id"] == app.app_id
+    assert result["data"]["installed_app_id"] == installed_app_id
+    assert result["data"]["location_id"] == location.location_id
+    assert result["data"]["access_token"] == token
+    assert result["data"]["refresh_token"] == request.refresh_token
+    assert result["data"]["client_secret"] == app_oauth_client.client_secret
+    assert result["data"]["client_id"] == app_oauth_client.client_id
+    assert result["title"] == location.name
+    entry = next((entry for entry in hass.config_entries.async_entries(DOMAIN)), None,)
+    assert entry.unique_id == smartapp.format_unique_id(
+        app.app_id, location.location_id
+    )
+
+
+>>>>>>> dev
 async def test_entry_created_from_update_event(
     hass, app, app_oauth_client, location, smartthings_mock
 ):
@@ -288,6 +324,8 @@ async def test_entry_created_existing_app_copies_oauth_client(
     assert "component_url" in result["description_placeholders"]
     # Assert access token is defaulted to an existing entry for convenience.
     assert result["data_schema"]({}) == {CONF_ACCESS_TOKEN: token}
+<<<<<<< HEAD
+=======
 
     # Enter token and advance to location screen
     result = await hass.config_entries.flow.async_configure(
@@ -329,8 +367,53 @@ async def test_entry_created_existing_app_copies_oauth_client(
     assert entry.unique_id == smartapp.format_unique_id(
         app.app_id, location.location_id
     )
+>>>>>>> dev
+
+    # Enter token and advance to location screen
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_ACCESS_TOKEN: token}
+    )
+    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["step_id"] == "select_location"
+
+    # Select location and advance to external auth
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_LOCATION_ID: location.location_id}
+    )
+    assert result["type"] == data_entry_flow.RESULT_TYPE_EXTERNAL_STEP
+    assert result["step_id"] == "authorize"
+    assert result["url"] == format_install_url(app.app_id, location.location_id)
+
+    # Complete external auth and advance to install
+    await smartapp.smartapp_install(hass, request, None, app)
+
+<<<<<<< HEAD
+    # Finish
+    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    assert result["type"] == data_entry_flow.RESULT_TYPE_CREATE_ENTRY
+    assert result["data"]["app_id"] == app.app_id
+    assert result["data"]["installed_app_id"] == installed_app_id
+    assert result["data"]["location_id"] == location.location_id
+    assert result["data"]["access_token"] == token
+    assert result["data"]["refresh_token"] == request.refresh_token
+    assert result["data"]["client_secret"] == oauth_client_secret
+    assert result["data"]["client_id"] == oauth_client_id
+    assert result["title"] == location.name
+    entry = next(
+        (
+            entry
+            for entry in hass.config_entries.async_entries(DOMAIN)
+            if entry.data[CONF_INSTALLED_APP_ID] == installed_app_id
+        ),
+        None,
+    )
+    assert entry.unique_id == smartapp.format_unique_id(
+        app.app_id, location.location_id
+    )
 
 
+=======
+>>>>>>> dev
 async def test_entry_created_with_cloudhook(
     hass, app, app_oauth_client, location, smartthings_mock
 ):
@@ -342,13 +425,19 @@ async def test_entry_created_with_cloudhook(
     installed_app_id = str(uuid4())
     refresh_token = str(uuid4())
     smartthings_mock.apps.return_value = []
+<<<<<<< HEAD
     smartthings_mock.create_app.return_value = (app, app_oauth_client)
     smartthings_mock.locations.return_value = [location]
+=======
+    smartthings_mock.create_app = AsyncMock(return_value=(app, app_oauth_client))
+    smartthings_mock.locations = AsyncMock(return_value=[location])
+>>>>>>> dev
     request = Mock()
     request.installed_app_id = installed_app_id
     request.auth_token = token
     request.location_id = location.location_id
     request.refresh_token = refresh_token
+<<<<<<< HEAD
 
     with patch.object(
         hass.components.cloud, "async_active_subscription", return_value=True
@@ -360,6 +449,19 @@ async def test_entry_created_with_cloudhook(
 
         await smartapp.setup_smartapp_endpoint(hass)
 
+=======
+
+    with patch.object(
+        hass.components.cloud, "async_active_subscription", Mock(return_value=True)
+    ), patch.object(
+        hass.components.cloud,
+        "async_create_cloudhook",
+        AsyncMock(return_value="http://cloud.test"),
+    ) as mock_create_cloudhook:
+
+        await smartapp.setup_smartapp_endpoint(hass)
+
+>>>>>>> dev
         # Webhook confirmation shown
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": "user"}
@@ -417,9 +519,16 @@ async def test_entry_created_with_cloudhook(
 
 async def test_invalid_webhook_aborts(hass):
     """Test flow aborts if webhook is invalid."""
+<<<<<<< HEAD
     hass.config.api.base_url = "http://0.0.0.0"
 
     # Webhook confirmation shown
+=======
+    # Webhook confirmation shown
+    await async_process_ha_core_config(
+        hass, {"external_url": "http://example.local:8123"},
+    )
+>>>>>>> dev
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": "user"}
     )
@@ -444,6 +553,7 @@ async def test_invalid_token_shows_error(hass):
     assert result["description_placeholders"][
         "webhook_url"
     ] == smartapp.get_webhook_url(hass)
+<<<<<<< HEAD
 
     # Advance to PAT screen
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
@@ -452,6 +562,16 @@ async def test_invalid_token_shows_error(hass):
     assert "token_url" in result["description_placeholders"]
     assert "component_url" in result["description_placeholders"]
 
+=======
+
+    # Advance to PAT screen
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["step_id"] == "pat"
+    assert "token_url" in result["description_placeholders"]
+    assert "component_url" in result["description_placeholders"]
+
+>>>>>>> dev
     # Enter token
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_ACCESS_TOKEN: token}
@@ -481,6 +601,7 @@ async def test_unauthorized_token_shows_error(hass, smartthings_mock):
     assert result["description_placeholders"][
         "webhook_url"
     ] == smartapp.get_webhook_url(hass)
+<<<<<<< HEAD
 
     # Advance to PAT screen
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
@@ -489,6 +610,16 @@ async def test_unauthorized_token_shows_error(hass, smartthings_mock):
     assert "token_url" in result["description_placeholders"]
     assert "component_url" in result["description_placeholders"]
 
+=======
+
+    # Advance to PAT screen
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["step_id"] == "pat"
+    assert "token_url" in result["description_placeholders"]
+    assert "component_url" in result["description_placeholders"]
+
+>>>>>>> dev
     # Enter token
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_ACCESS_TOKEN: token}
@@ -558,6 +689,7 @@ async def test_webhook_problem_shows_error(hass, smartthings_mock):
     assert result["description_placeholders"][
         "webhook_url"
     ] == smartapp.get_webhook_url(hass)
+<<<<<<< HEAD
 
     # Advance to PAT screen
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
@@ -566,6 +698,16 @@ async def test_webhook_problem_shows_error(hass, smartthings_mock):
     assert "token_url" in result["description_placeholders"]
     assert "component_url" in result["description_placeholders"]
 
+=======
+
+    # Advance to PAT screen
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["step_id"] == "pat"
+    assert "token_url" in result["description_placeholders"]
+    assert "component_url" in result["description_placeholders"]
+
+>>>>>>> dev
     # Enter token
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_ACCESS_TOKEN: token}
@@ -625,6 +767,7 @@ async def test_unknown_response_error_shows_error(hass, smartthings_mock):
         request_info=request_info, history=None, status=HTTP_NOT_FOUND
     )
     smartthings_mock.apps.side_effect = error
+<<<<<<< HEAD
 
     # Webhook confirmation shown
     result = await hass.config_entries.flow.async_init(
@@ -643,6 +786,26 @@ async def test_unknown_response_error_shows_error(hass, smartthings_mock):
     assert "token_url" in result["description_placeholders"]
     assert "component_url" in result["description_placeholders"]
 
+=======
+
+    # Webhook confirmation shown
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": "user"}
+    )
+    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["step_id"] == "user"
+    assert result["description_placeholders"][
+        "webhook_url"
+    ] == smartapp.get_webhook_url(hass)
+
+    # Advance to PAT screen
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["step_id"] == "pat"
+    assert "token_url" in result["description_placeholders"]
+    assert "component_url" in result["description_placeholders"]
+
+>>>>>>> dev
     # Enter token
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_ACCESS_TOKEN: token}

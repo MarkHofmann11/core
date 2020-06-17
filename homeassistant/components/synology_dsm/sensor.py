@@ -22,6 +22,7 @@ from .const import (
     DOMAIN,
     STORAGE_DISK_SENSORS,
     STORAGE_VOL_SENSORS,
+    SYNO_API,
     TEMP_SENSORS_KEYS,
     UTILISATION_SENSORS,
 )
@@ -34,7 +35,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Synology NAS Sensor."""
 
-    api = hass.data[DOMAIN][entry.unique_id]
+    api = hass.data[DOMAIN][entry.unique_id][SYNO_API]
 
     sensors = [
         SynoNasUtilSensor(api, sensor_type, UTILISATION_SENSORS[sensor_type])
@@ -61,7 +62,7 @@ async def async_setup_entry(
                 for sensor_type in STORAGE_DISK_SENSORS
             ]
 
-    async_add_entities(sensors, True)
+    async_add_entities(sensors)
 
 
 class SynoNasSensor(Entity):
@@ -132,6 +133,10 @@ class SynoNasSensor(Entity):
         """No polling needed."""
         return False
 
+    async def async_update(self):
+        """Only used by the generic entity update service."""
+        await self._api.update()
+
     async def async_added_to_hass(self):
         """Register state update callback."""
         self._unsub_dispatcher = async_dispatcher_connect(
@@ -154,6 +159,7 @@ class SynoNasUtilSensor(SynoNasSensor):
             attr = attr()
         if attr is None:
             return None
+<<<<<<< HEAD
 
         # Data (RAM)
         if self._unit == DATA_MEGABYTES:
@@ -163,6 +169,17 @@ class SynoNasUtilSensor(SynoNasSensor):
         if self._unit == DATA_RATE_KILOBYTES_PER_SECOND:
             return round(attr / 1024.0, 1)
 
+=======
+
+        # Data (RAM)
+        if self._unit == DATA_MEGABYTES:
+            return round(attr / 1024.0 ** 2, 1)
+
+        # Network
+        if self._unit == DATA_RATE_KILOBYTES_PER_SECOND:
+            return round(attr / 1024.0, 1)
+
+>>>>>>> dev
         return attr
 
 

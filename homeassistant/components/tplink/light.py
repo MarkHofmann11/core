@@ -13,7 +13,7 @@ from homeassistant.components.light import (
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR,
     SUPPORT_COLOR_TEMP,
-    Light,
+    LightEntity,
 )
 from homeassistant.exceptions import HomeAssistantError
 import homeassistant.helpers.device_registry as dr
@@ -33,6 +33,9 @@ CURRENT_POWER_UPDATE_INTERVAL = timedelta(seconds=60)
 HISTORICAL_POWER_UPDATE_INTERVAL = timedelta(minutes=60)
 
 _LOGGER = logging.getLogger(__name__)
+
+MAX_ATTEMPTS = 10
+SLEEP_TIME = 2
 
 ATTR_CURRENT_POWER_W = "current_power_w"
 ATTR_DAILY_ENERGY_KWH = "daily_energy_kwh"
@@ -120,7 +123,7 @@ class LightFeatures(NamedTuple):
     has_emeter: bool
 
 
-class TPLinkSmartBulb(Light):
+class TPLinkSmartBulb(LightEntity):
     """Representation of a TPLink Smart Bulb."""
 
     def __init__(self, smartbulb: SmartBulb) -> None:
@@ -236,19 +239,23 @@ class TPLinkSmartBulb(Light):
         # State is currently being set, ignore.
         if self._is_setting_light_state:
             return
-
-        try:
-            # Update light features only once.
-            if not self._light_features:
-                self._light_features = self._get_light_features_retry()
-            self._light_state = self._get_light_state_retry()
-            self._is_available = True
-        except (SmartDeviceException, OSError) as ex:
-            if self._is_available:
-                _LOGGER.warning(
-                    "Could not read data for %s: %s", self.smartbulb.host, ex
-                )
-            self._is_available = False
+        for update_attempt in range(MAX_ATTEMPTS):
+            try:
+                # Update light features only once.
+                if not self._light_features:
+                    self._light_features = self._get_light_features_retry()
+                self._light_state = self._get_light_state_retry()
+                self._is_available = True
+            except (SmartDeviceException, OSError) as ex:
+                time.sleep(SLEEP_TIME)
+            else:
+                break
+        else:
+                if self._is_available:
+                    _LOGGER.warning(
+                        "Could not read data for %s: %s", self.smartbulb.host, ex
+                    )
+                self._is_available = False
 
     @property
     def supported_features(self):
