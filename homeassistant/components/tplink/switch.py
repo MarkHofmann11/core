@@ -17,8 +17,6 @@ from . import CONF_SWITCH, DOMAIN as TPLINK_DOMAIN
 from .common import async_add_entities_retry
 
 PARALLEL_UPDATES = 0
-MAX_ATTEMPTS = 5
-SLEEP_TIME = 2
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -114,56 +112,51 @@ class SmartPlugSwitch(SwitchEntity):
 
     def update(self):
         """Update the TP-Link switch's state."""
-        for update_attempt in range(MAX_ATTEMPTS):
-            try:
-                if not self._sysinfo:
-                    self._sysinfo = self.smartplug.sys_info
-                    self._mac = self.smartplug.mac
-                    self._model = self.smartplug.model
-                    if self.smartplug.context is None:
-                        self._alias = self.smartplug.alias
-                        self._device_id = self._mac
-                    else:
-                        self._alias = self._plug_from_context["alias"]
-                        self._device_id = self.smartplug.context
-
+        try:
+            if not self._sysinfo:
+                self._sysinfo = self.smartplug.sys_info
+                self._mac = self.smartplug.mac
+                self._model = self.smartplug.model
                 if self.smartplug.context is None:
-                    self._state = self.smartplug.state == self.smartplug.SWITCH_STATE_ON
+                    self._alias = self.smartplug.alias
+                    self._device_id = self._mac
                 else:
-                    self._state = self._plug_from_context["state"] == 1
+                    self._alias = self._plug_from_context["alias"]
+                    self._device_id = self.smartplug.context
 
-                if self.smartplug.has_emeter:
-                    emeter_readings = self.smartplug.get_emeter_realtime()
-
-                    self._emeter_params[ATTR_CURRENT_POWER_W] = "{:.2f}".format(
-                        emeter_readings["power"]
-                    )
-                    self._emeter_params[ATTR_TOTAL_ENERGY_KWH] = "{:.3f}".format(
-                        emeter_readings["total"]
-                    )
-                    self._emeter_params[ATTR_VOLTAGE] = "{:.1f}".format(
-                        emeter_readings["voltage"]
-                    )
-                    self._emeter_params[ATTR_CURRENT_A] = "{:.2f}".format(
-                        emeter_readings["current"]
-                    )
-
-                    emeter_statics = self.smartplug.get_emeter_daily()
-                    try:
-                        self._emeter_params[ATTR_TODAY_ENERGY_KWH] = "{:.3f}".format(
-                            emeter_statics[int(time.strftime("%e"))]
-                        )
-                    except KeyError:
-                        # Device returned no daily history
-                        pass
-
-                self._available = True
-
-            except (SmartDeviceException, OSError) as ex:
-                time.sleep(SLEEP_TIME)
+            if self.smartplug.context is None:
+                self._state = self.smartplug.state == self.smartplug.SWITCH_STATE_ON
             else:
-                break
-        else:
+                self._state = self._plug_from_context["state"] == 1
+
+            if self.smartplug.has_emeter:
+                emeter_readings = self.smartplug.get_emeter_realtime()
+
+                self._emeter_params[ATTR_CURRENT_POWER_W] = "{:.2f}".format(
+                    emeter_readings["power"]
+                )
+                self._emeter_params[ATTR_TOTAL_ENERGY_KWH] = "{:.3f}".format(
+                    emeter_readings["total"]
+                )
+                self._emeter_params[ATTR_VOLTAGE] = "{:.1f}".format(
+                    emeter_readings["voltage"]
+                )
+                self._emeter_params[ATTR_CURRENT_A] = "{:.2f}".format(
+                    emeter_readings["current"]
+                )
+
+                emeter_statics = self.smartplug.get_emeter_daily()
+                try:
+                    self._emeter_params[ATTR_TODAY_ENERGY_KWH] = "{:.3f}".format(
+                        emeter_statics[int(time.strftime("%e"))]
+                    )
+                except KeyError:
+                    # Device returned no daily history
+                    pass
+
+            self._available = True
+
+        except (SmartDeviceException, OSError) as ex:
             if self._available:
                 _LOGGER.warning(
                     "Could not read state for %s: %s", self.smartplug.host, ex
